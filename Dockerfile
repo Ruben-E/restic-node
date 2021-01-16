@@ -15,4 +15,4 @@ VOLUME /data
 COPY node_modules /app/node_modules
 COPY backup.js /app/backup.js
 
-ENTRYPOINT ["node","/app/backup.js"]
+ENTRYPOINT ["node","/app/backup.js","cron"]

@@ -67,13 +67,15 @@ async function sh(cmd) {
     });
 }
 
+const args = process.argv.slice(2);
+
 const discordHook = new Discord.WebhookClient(process.env.DISCORD_WEBHOOK_ID, process.env.DISCORD_WEBHOOK_TOKEN);
 const discordCharacterLimit = 1900;
 
 const cronSchedule = process.env.BACKUP_CRON || '0 */6 * * *'
 
-const backupArgs = process.env.RESTIC_JOB_ARGS;
-const forgetArgs = process.env.RESTIC_FORGET_ARGS;
+const backupArgs = process.env.RESTIC_JOB_ARGS || '';
+const forgetArgs = process.env.RESTIC_FORGET_ARGS || '';
 
 const rcloneArgs = `serve restic --stdio --b2-hard-delete --drive-use-trash=false --fast-list --transfers=32`
 
@@ -141,8 +143,15 @@ async function main() {
     notifyDiscord();
 }
 
-cron.schedule(cronSchedule, () => {
-    main()
-});
+if (args.length > 0 && args[0] == 'cron') {
+    cron.schedule(cronSchedule, () => {
+        main()
+    });
 
-logger.info('Application started')
+    logger.info(`Application started with schedule '${cronSchedule}'`)
+} else {
+    (async () => {
+        await main();
+        discordHook.destroy();
+    })();
+}
