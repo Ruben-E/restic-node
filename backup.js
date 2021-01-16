@@ -79,7 +79,7 @@ const forgetArgs = process.env.RESTIC_FORGET_ARGS || '';
 
 const rcloneArgs = `serve restic --stdio --b2-hard-delete --drive-use-trash=false --fast-list --transfers=32`
 
-const backupCommand = `restic backup /data ${backupArgs} -o rclone.args="${rcloneArgs}"}`
+const backupCommand = `restic backup /data ${backupArgs} -o rclone.args="${rcloneArgs}"`
 const forgetCommand = `restic forget ${forgetArgs} -o rclone.args="${rcloneArgs}"`
 const unlockCommand = `restic unlock -o rclone.args="${rcloneArgs}"`
 
