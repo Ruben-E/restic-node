@@ -75,7 +75,7 @@ const discordCharacterLimit = 1900;
 
 const backupCron = process.env.BACKUP_CRON || '0 */6 * * *'
 const checkCron = process.env.CHECK_CRON || '0 7 * * 1'
-const pruneCron = process.env.PRUNE_CRON || '0 4 2 * *'
+const pruneCron = process.env.PRUNE_CRON || '0 1 2 * *'
 
 const backupArgs = process.env.RESTIC_JOB_ARGS || '';
 const forgetArgs = process.env.RESTIC_FORGET_ARGS || '';
