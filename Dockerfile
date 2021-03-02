@@ -1,4 +1,4 @@
-FROM restic/restic:0.11.0 as restic
+FROM restic/restic:0.12.0 as restic
 FROM node:alpine
 
 RUN apk add --update --no-cache heirloom-mailx fuse curl ca-certificates openssh-client tzdata
