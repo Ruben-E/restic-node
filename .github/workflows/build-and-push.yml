@@ -5,12 +5,17 @@ on:
     types: [published]
     
 jobs:
-  push_to_registries:
-    name: Push Docker image to multiple registries
+  build_and_push:
+    name: Build and push to Docker Hub
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
+      - name: Build
+        uses: actions/setup-node@v2
+        with:
+          node-version: '15'
+      - run: npm install
       - name: Push to Docker Hub
         uses: docker/build-push-action@v1
         with:
