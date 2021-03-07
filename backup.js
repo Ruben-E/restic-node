@@ -85,6 +85,7 @@ const args = process.argv.slice(2);
 let discordEnabled = false
 let discordHook;
 if (process.env.DISCORD_WEBHOOK_ID && process.env.DISCORD_WEBHOOK_TOKEN) {
+    discordEnabled = true;
     discordHook = new Discord.WebhookClient(process.env.DISCORD_WEBHOOK_ID, process.env.DISCORD_WEBHOOK_TOKEN);
 }
 
