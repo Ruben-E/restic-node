@@ -1,8 +1,9 @@
-const exec = require('child_process').exec;
+const spawn = require('child_process').spawn;
 const winston = require('winston');
 const cron = require('node-cron');
 const Transport = require('winston-transport');
 const Discord = require('discord.js');
+const readline = require('readline');
 var getISOWeek = require('date-fns/getISOWeek')
 
 require('winston-daily-rotate-file');
@@ -56,21 +57,37 @@ const logger = winston.createLogger({
     ],
 });
 
-async function sh(cmd) {
-    return new Promise(function (resolve, reject) {
-        exec(cmd, (err, stdout, stderr) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve({ stdout, stderr });
-            }
-        });
+async function sh(cmd, env) {
+    const output = await spawn(cmd, {shell: true, env: {...process.env, ...env}})
+
+    const readLineStdout = readline.createInterface({ input: output.stdout });
+    const readLineStderr = readline.createInterface({ input: output.stderr });
+
+    readLineStdout.on('line', line => {
+        logger.info(`retic: ${line}`);
+    })
+
+    readLineStderr.on('line', line => {
+        logger.warn(`retic err: ${line}`);
+    })
+
+    const exitCode = await new Promise((resolve, reject) => {
+        output.on('close', resolve);
     });
+
+    if (exitCode) {
+        throw new Error(`subprocess error exit ${exitCode}`);
+    }
 }
 
 const args = process.argv.slice(2);
 
-const discordHook = new Discord.WebhookClient(process.env.DISCORD_WEBHOOK_ID, process.env.DISCORD_WEBHOOK_TOKEN);
+let discordEnabled = false
+let discordHook;
+if (process.env.DISCORD_WEBHOOK_ID && process.env.DISCORD_WEBHOOK_TOKEN) {
+    discordHook = new Discord.WebhookClient(process.env.DISCORD_WEBHOOK_ID, process.env.DISCORD_WEBHOOK_TOKEN);
+}
+
 const discordCharacterLimit = 1900;
 
 const backupCron = process.env.BACKUP_CRON || '0 */6 * * *'
@@ -94,6 +111,10 @@ function notifyDiscord() {
         const logs = collectorTransport.getCollection()
         collectorTransport.resetCollection()
 
+        if (!discordEnabled) {
+            return;
+        }
+
         let buffer = []
         for (const log of logs) {
             const out = `${buffer.join('\n')}\n${log}`
@@ -114,13 +135,7 @@ function notifyDiscord() {
 async function runAndLogRestic(cmd) {
     logger.info(`Running '${cmd}'`)
 
-    let { stdout, stderr } = await sh(cmd);
-    for (let line of stdout.split('\n')) {
-        logger.info(`retic: ${line}`);
-    }
-    for (let line of stderr.split('\n')) {
-        logger.warn(`retic err: ${line}`);
-    }
+    await sh(cmd);
 }
 
 async function backup() {
@@ -138,7 +153,7 @@ async function backupAndForget() {
         await forget();
         logger.info('Forget succesful')
     } catch (e) {
-        logger.warn(`Backup / forget failed (${e.code}): ${e.message}`)
+        logger.warn(`Backup / forget failed: ${e.message}`)
     }
 
     notifyDiscord();
@@ -146,7 +161,7 @@ async function backupAndForget() {
 
 async function checkWeeklySubset() {
     try {
-        let week = getISOWeek(new Date(), { weekStartsOn: 1 })
+        let week = getISOWeek(new Date(), {weekStartsOn: 1})
 
         if (week > 52) {
             week = 52;
@@ -171,6 +186,12 @@ async function prune() {
     }
 
     notifyDiscord();
+}
+
+function stop() {
+    if (discordEnabled) {
+        discordHook.destroy();
+    }
 }
 
 let job = 'backup';
@@ -198,17 +219,17 @@ if (job == 'cron') {
 } else if (job == 'backup') {
     (async () => {
         await backupAndForget();
-        discordHook.destroy();
+        stop();
     })();
 } else if (job == 'check') {
     (async () => {
         await checkWeeklySubset();
-        discordHook.destroy();
+        stop();
     })();
 } else if (job == 'prune') {
     (async () => {
         await prune();
-        discordHook.destroy();
+        stop();
     })();
 } else {
     logger.error(`Unknown command '${job}'`)
