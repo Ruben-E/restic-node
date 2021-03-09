@@ -13,6 +13,6 @@ RUN mkdir -p /mnt/restic /var/log;
 VOLUME /data
 
 COPY node_modules /app/node_modules
-COPY backup.js /app/backup.js
+COPY dist/backup.js /app/backup.js
 
 ENTRYPOINT ["node","/app/backup.js","cron"]
